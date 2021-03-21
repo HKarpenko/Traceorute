@@ -7,7 +7,11 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <unistd.h>
+
+struct timeval	tvorig, tvrecv;	/* originate & receive timeval structs */
+long		tsorig, tsrecv;	/* originate & receive timestamps */
 
 void print_as_bytes (unsigned char* buff, ssize_t length)
 {
@@ -33,7 +37,7 @@ int recieve(int sockfd, int PID, int ttl){
     int ready = select (sockfd+1, &descriptors, NULL, NULL, &tv);
 
     if (ready < 0) {
-        fprintf(stderr, "recvfrom error: %s\n", strerror(errno)); 
+        fprintf(stderr, "select error: %s\n", strerror(errno)); 
         return EXIT_FAILURE;
     }
     else if(ready == 0){
@@ -47,6 +51,11 @@ int recieve(int sockfd, int PID, int ttl){
         for(int i=0;i<ready;i++){
             ssize_t packet_len = recvfrom (sockfd, buffer, IP_MAXPACKET, 0, (struct sockaddr*)&sender, &sender_len);
 
+            if (packet_len < 0) {
+                fprintf(stderr, "select error: %s\n", strerror(errno)); 
+                return EXIT_FAILURE;
+            }
+
             struct ip* ip_header = (struct ip*) buffer;
             ssize_t	ip_header_len = 4 * ip_header->ip_hl;
 
@@ -55,6 +64,14 @@ int recieve(int sockfd, int PID, int ttl){
 
             if(icmp_header->icmp_id != PID || (icmp_header->icmp_seq - 1)/3 != ttl-1 )
                 continue;
+
+            gettimeofday(&tvorig, (struct timezone *)NULL);
+            tsorig = (tvorig.tv_sec % (24*60*60)) * 1000 + tvorig.tv_usec / 1000;
+
+            tsrecv = ntohl(icmp_header->icmp_otime);
+		    long tsdiff = tsorig - tsrecv;
+
+            printf("Time %ldms",tsdiff);
 
             expected_pack_count++;
 
@@ -106,6 +123,13 @@ int sendPack(int PID, int seq_number, int sockfd, char* adres_ip, int ttl){
     header.icmp_cksum = compute_icmp_checksum (
     (u_int16_t*)&header, sizeof(header));
 
+    gettimeofday(&tvorig, (struct timezone *)NULL);
+    tsorig = (tvorig.tv_sec % (24*60*60)) * 1000 + tvorig.tv_usec / 1000;
+
+    header.icmp_otime = htonl(tsorig);
+	header.icmp_rtime = 0;
+	header.icmp_ttime = 0;
+
     struct sockaddr_in recipient;
     bzero (&recipient, sizeof(recipient));
     recipient.sin_family = AF_INET;
@@ -113,7 +137,7 @@ int sendPack(int PID, int seq_number, int sockfd, char* adres_ip, int ttl){
 
     setsockopt (sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
 
-    sendto (
+    int bytes = sendto (
         sockfd,
         &header,
         sizeof(header),
@@ -121,6 +145,11 @@ int sendPack(int PID, int seq_number, int sockfd, char* adres_ip, int ttl){
         (struct sockaddr*)&recipient,
         sizeof(recipient)
     );
+    if (bytes < 0)  {
+        fprintf(stderr, "sendto error: %s\n", strerror(errno)); 
+        return EXIT_FAILURE;
+    }
+
     return 0;
 }
 

@@ -193,10 +193,10 @@ struct icmp
 #define        icmp_otime        icmp_dun.id_ts.its_otime
 #define        icmp_rtime        icmp_dun.id_ts.its_rtime
 #define        icmp_ttime        icmp_dun.id_ts.its_ttime
-#define        icmp_ip                icmp_dun.id_ip.idi_ip
-#define        icmp_radv        icmp_dun.id_radv
-#define        icmp_mask        icmp_dun.id_mask
-#define        icmp_data        icmp_dun.id_data
+#define        icmp_ip           icmp_dun.id_ip.idi_ip
+#define        icmp_radv         icmp_dun.id_radv
+#define        icmp_mask         icmp_dun.id_mask
+#define        icmp_data         icmp_dun.id_data
 };
 
 /*
