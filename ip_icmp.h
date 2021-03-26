@@ -214,9 +214,6 @@ struct icmp
 #ifndef _IP_VHL
 #define        ICMP_ADVLEN(p)        (8 + ((p)->icmp_ip.ip_hl << 2) + 8)
         /* N.B.: must separately check that ip_hl >= 5 */
-#else
-#define        ICMP_ADVLEN(p)        (8 + (IP_VHL_HL((p)->icmp_ip.ip_vhl) << 2) + 8)
-        /* N.B.: must separately check that header length >= 5 */
 
 /* Definition of type and code fields. */
 /* defined above: ICMP_ECHOREPLY, ICMP_REDIRECT, ICMP_ECHO */

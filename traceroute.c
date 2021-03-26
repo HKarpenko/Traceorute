@@ -13,12 +13,6 @@
 struct timeval	tvorig, tvrecv;	/* originate & receive timeval structs */
 long		tsorig, tsrecv;	/* originate & receive timestamps */
 
-void print_as_bytes (unsigned char* buff, ssize_t length)
-{
-	for (ssize_t i = 0; i < length; i++, buff++)
-		printf ("%.2x ", *buff);	
-}
-
 
 int recieve(int sockfd, int PID, int ttl){
     struct sockaddr_in 	sender;	
@@ -34,15 +28,11 @@ int recieve(int sockfd, int PID, int ttl){
     tv.tv_sec = seconds; 
     tv.tv_usec = 0;
 
-    int ready = select (sockfd+1, &descriptors, NULL, NULL, &tv);
+    int ready = select(sockfd+1, &descriptors, NULL, NULL, &tv);
 
     if (ready < 0) {
         fprintf(stderr, "select error: %s\n", strerror(errno)); 
         return EXIT_FAILURE;
-    }
-    else if(ready == 0){
-        printf ("* * *\n");
-        return 0;
     }
 
     int expected_pack_count = 0;
@@ -59,8 +49,17 @@ int recieve(int sockfd, int PID, int ttl){
             struct ip* ip_header = (struct ip*) buffer;
             ssize_t	ip_header_len = 4 * ip_header->ip_hl;
 
-            u_int8_t* icmp_packet = buffer + 4 * ip_header->ip_hl;
+            u_int8_t* icmp_packet = buffer + ip_header_len;
             struct icmp* icmp_header = (struct icmp*) icmp_packet;
+
+            if( icmp_header->icmp_type == ICMP_TIMXCEED){
+
+                ip_header = &(icmp_header->icmp_ip);
+                ip_header_len = 4 * ip_header->ip_hl;
+
+                icmp_packet = (u_int8_t*)ip_header + ip_header_len;
+                icmp_header = (struct icmp*)icmp_packet;
+            }
 
             if(icmp_header->icmp_id != PID || (icmp_header->icmp_seq - 1)/3 != ttl-1 )
                 continue;
@@ -69,9 +68,9 @@ int recieve(int sockfd, int PID, int ttl){
             tsorig = (tvorig.tv_sec % (24*60*60)) * 1000 + tvorig.tv_usec / 1000;
 
             tsrecv = ntohl(icmp_header->icmp_otime);
-		    long tsdiff = tsorig - tsrecv;
+            long tsdiff = tsorig - tsrecv;
 
-            printf("Time %ldms",tsdiff);
+            printf("Time %ld ms\n",tsdiff);
 
             expected_pack_count++;
 
@@ -81,11 +80,7 @@ int recieve(int sockfd, int PID, int ttl){
 
 
             printf ("IP header: "); 
-            print_as_bytes (buffer, ip_header_len);
-            printf("\n");
-
-            printf ("IP data:   ");
-            print_as_bytes (buffer + ip_header_len, packet_len - ip_header_len);
+            printf("Get: CODE: %d PID: %d, SEQ: %d,\n",icmp_header->icmp_type, icmp_header->icmp_id,icmp_header->icmp_seq);
             printf("\n\n");
         }
         ready = select (sockfd+1, &descriptors, NULL, NULL, &tv);
@@ -93,7 +88,7 @@ int recieve(int sockfd, int PID, int ttl){
     /*
     if(expected_pack_count==0)
         printf ("*\n");
-    else if(expected_pack_count<3)
+    else if(expected_pack_count < 3)
         printf ("???\n");
     else
         printf("%dms\n",0);
