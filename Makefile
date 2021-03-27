@@ -1,17 +1,10 @@
-CC=gcc
 CFLAGS=-std=gnu99 -Wall -Wextra
-LDFLAGS=
-SOURCES=traceroute.c
-OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLE=traceroute
 
-all: $(SOURCES) $(EXECUTABLE)
-	
-$(EXECUTABLE): $(OBJECTS) 
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+all: traceroute
 
-.c.o:
-	$(CC) $(CFLAGS) $< -o $@
+traceroute: traceroute.o
+
+traceroute.o: traceroute.c
 
 clean:
 	rm -rf *.o
