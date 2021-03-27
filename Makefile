@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-c -Wall -Wextra
+CFLAGS=-std=gnu99 -Wall -Wextra
 LDFLAGS=
 SOURCES=traceroute.c
 OBJECTS=$(SOURCES:.c=.o)
