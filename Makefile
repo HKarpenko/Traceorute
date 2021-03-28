@@ -10,4 +10,4 @@ clean:
 	rm -rf *.o
 
 distclean:
-	rm -rf *.o *.c
+	rm -rf *.o traceroute
