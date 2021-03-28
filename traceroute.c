@@ -1,14 +1,10 @@
 //Heorhii Karpenko, 312372
 
-#include <netinet/ip.h>
 #include <arpa/inet.h>
-#include <netinet/ip_icmp.h>
-#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
