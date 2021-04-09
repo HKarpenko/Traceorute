@@ -45,15 +45,12 @@ void process_valid_package(int count, int ttl, char* reciever, char* ip_buffer1,
     }
 }
 
-int recieve_n_packages(int n, int sockfd, int PID, int ttl, char* reciever, int* pack_count, long* avg_time){
+int recieve_n_packages(int n, int sockfd, int PID, int ttl, char* reciever, int* pack_count, long* avg_time, char* sender_ip_buffer1, char* sender_ip_buffer2){
     struct sockaddr_in 	sender;	
     socklen_t 			sender_len = sizeof(sender);
     u_int8_t 			buffer[IP_MAXPACKET];
 
-    int count = *pack_count;
-
-    char sender_ip_buffer1[20]; 
-    char sender_ip_buffer2[20]; 
+    int count = *pack_count; 
 
     for(int i=0;i<n;i++){
         ssize_t packet_len = recvfrom (sockfd, buffer, IP_MAXPACKET, 0, (struct sockaddr*)&sender, &sender_len);
@@ -68,8 +65,8 @@ int recieve_n_packages(int n, int sockfd, int PID, int ttl, char* reciever, int*
         if( icmp_header->icmp_type == 11)
             icmp_header = get_icmp_from_ip((uint8_t*)&(icmp_header->icmp_ip));
 
-        int rcv_id = icmp_header->icmp_seq - 1;
-        int rcv_ttl = rcv_id/3 + 1;
+        int rcv_seq = icmp_header->icmp_seq - 1;
+        int rcv_ttl = rcv_seq/3 + 1;
 
         //validation PID and seq_number
         if(icmp_header->icmp_id != PID || rcv_ttl != ttl )
@@ -80,9 +77,9 @@ int recieve_n_packages(int n, int sockfd, int PID, int ttl, char* reciever, int*
         count++;
 
         set_current_time_in(&tsrecv);
-        if(tsrecv < tsorig[rcv_id%3])
+        if(tsrecv < tsorig[rcv_seq%3])
             tsrecv+=1000;
-        *avg_time += tsrecv - tsorig[rcv_id%3];
+        *avg_time += tsrecv - tsorig[rcv_seq%3];
     }
 
     *pack_count = count;
@@ -110,10 +107,16 @@ int recieve(int sockfd, int PID, int ttl, char* reciever){
     int expected_pack_count = 0;
     long avg_time = 0;
 
+    char sender_ip_buffer1[20]; 
+    char sender_ip_buffer2[20];
+
     while(ready > 0){
-        return_code = recieve_n_packages(ready, sockfd, PID, ttl, reciever, &expected_pack_count, &avg_time);
+        return_code = recieve_n_packages(ready, sockfd, PID, ttl, reciever, 
+                        &expected_pack_count, &avg_time, sender_ip_buffer1, sender_ip_buffer2);
         if (return_code<0)
             return return_code;
+        if(expected_pack_count==3)
+            break;
         ready = select(sockfd+1, &descriptors, NULL, NULL, &tv);
     }
     
